@@ -1,5 +1,5 @@
 # Gitignore for Physical AI & Humanoid Robotics Textbook Project
-
+.venv
 # Docusaurus
 website/node_modules/
 website/.docusaurus/

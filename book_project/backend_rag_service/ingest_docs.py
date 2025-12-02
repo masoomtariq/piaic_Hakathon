@@ -7,7 +7,7 @@ from google import genai
 from pathlib import Path
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
-from app.services.qdrant import generate_gemini_embedding
+from services.qdrant import generate_gemini_embedding
 # Add the project root (one level above chatbot_backend) to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 

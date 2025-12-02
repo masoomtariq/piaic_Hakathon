@@ -1,48 +1,15 @@
 import os
 from google import genai
 from google.genai import types
-from typing import List, Dict, Any
+from .qdrant import retrieve_context_from_qdrant, generate_gemini_embedding
 
-from qdrant_client.http.models import Filter, FieldCondition, MatchValue
-from .qdrant import get_qdrant_client, generate_gemini_embedding
-
-# Configure Gemini API - moved to main.py
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
 else:
     print("GEMINI_API_KEY not found in environment variables.")
 
-def retrieve_context_from_qdrant(query_embedding: List[float], collection_name: str, limit: int = 3, selected_text: str = None) -> List[Dict[str, Any]]:
-    qdrant_client = get_qdrant_client()
-    search_params = {"hnsw_ef": 128, "exact": False}
-
-    query_filter = None
-    if selected_text:
-        # If specific text is selected, try to prioritize documents containing that text
-        # This is a simplified approach, a more advanced solution might involve re-ranking or keyword extraction
-        query_filter = Filter(must=[
-            FieldCondition(
-                key="text",
-                match=MatchValue(value=selected_text)
-            )
-        ])
-
-    search_result = qdrant_client.search(
-        collection_name=collection_name,
-        query_vector=query_embedding,
-        query_filter=query_filter,
-        limit=limit,
-        with_payload=True,
-        search_params=search_params,
-    )
-
-    context = []
-    for hit in search_result:
-        context.append({"text": hit.payload.get("text"), "source": hit.payload.get("source")})
-    return context
-
-async def generate_rag_response(user_query: str, collection_name: str, selected_text: str = None) -> str:
+async def generate_rag_response(user_query: str, selected_text: str = None) -> str:
 
     # 1. Generate embedding for the user query
     query_embedding = generate_gemini_embedding(user_query)
@@ -50,7 +17,7 @@ async def generate_rag_response(user_query: str, collection_name: str, selected_
         return "Error: Could not generate embedding for the query."
 
     # 2. Retrieve relevant context from Qdrant
-    context = await retrieve_context_from_qdrant(query_embedding, collection_name, selected_text=selected_text)
+    context = await retrieve_context_from_qdrant(query_embedding, selected_text=selected_text)
 
     if not context:
         return "I couldn't find any relevant information in the textbook to answer your question."

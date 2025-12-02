@@ -1,12 +1,12 @@
 # ingest_docs.py
 import os
-import asyncio
-import logging
 import uuid
+import sys
+import asyncio
+from google import genai
 from pathlib import Path
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
-import sys
 from app.services.qdrant import generate_gemini_embedding
 # Add the project root (one level above chatbot_backend) to sys.path
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
@@ -14,51 +14,48 @@ sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 from qdrant_client.models import VectorParams, Distance, PointStruct
 
 # Load environment variables
-load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
+# load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
-QDRANT_HOST = os.getenv("QDRANT_HOST")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    client = genai.Client(api_key=GEMINI_API_KEY)
+else:
+    print("GEMINI_API_KEY not found in environment variables.")
+
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-COLLECTION_NAME = "book_collection"
-
-# Logging setup
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
-logger.debug(f"Loaded QDRANT_HOST: {repr(QDRANT_HOST)}")
-logger.debug(f"Loaded QDRANT_API_KEY: {repr(QDRANT_API_KEY)}")
-
-if not QDRANT_HOST or not QDRANT_API_KEY:
-    raise ValueError("QDRANT_HOST and QDRANT_API_KEY must be set in your .env file.")
-
-# Connect to Qdrant
-client = QdrantClient(url=QDRANT_HOST, api_key=QDRANT_API_KEY)
-logger.info(f"Connecting to Qdrant at: {QDRANT_HOST}")
+QDRANT_HOST = os.getenv("QDRANT_HOST")
+COLLECTION_NAME = os.getenv("COLLECTION_NAME")
+if COLLECTION_NAME and QDRANT_HOST and QDRANT_API_KEY:
+    qdrant_client = QdrantClient(
+        url=QDRANT_HOST,
+        api_key=QDRANT_API_KEY,
+    )
+else:
+    print("QDRANT_API_KEY, QDRANT_HOST and COLLECTION_NAME not found in environment variables.")
 
 # Create collection if it doesn't exist
 if not client.collection_exists(COLLECTION_NAME):
     client.recreate_collection(
         collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(size=768, distance=Distance.COSINE) # Gemini embedding-001 size
+        vectors_config=VectorParams(size=3072, distance=Distance.COSINE)
     )
-    logger.info(f"Collection '{COLLECTION_NAME}' created.")
 else:
-    logger.info(f"Collection '{COLLECTION_NAME}' already exists.")
+    print(f"Collection '{COLLECTION_NAME}' already exists.")
 
 # Read and process documents
 async def ingest_documents():
-    docs_path = Path(__file__).parent.parent / "book_source" / "docs"
+    docs_path = Path(__file__).parent / "book_source" / "docs"
     md_files = list(docs_path.rglob("*.md"))
 
     for doc_file in md_files:
-        logger.info(f"Processing {doc_file}...")
         try:
             text = doc_file.read_text(encoding="utf-8")
         except Exception as e:
-            logger.error(f"Failed to read {doc_file}: {e}")
+            print(f"Failed to read {doc_file}: {e}")
             continue
 
         # Simple chunking by 500 characters
-        chunks = [text[i:i+500] for i in range(0, len(text), 500)]
+        chunks = [text[i:i+510] for i in range(0, len(text), 500)]
         points = []
 
         for chunk in chunks:
@@ -75,9 +72,9 @@ async def ingest_documents():
         try:
             client.upsert(collection_name=COLLECTION_NAME, points=points, wait=True)
         except Exception as e:
-            logger.error(f"Failed to upsert points for {doc_file}: {e}")
+            print(f"Failed to upsert points for {doc_file}: {e}")
 
 # Run ingestion
 if __name__ == "__main__":
     asyncio.run(ingest_documents())
-    logger.info("Ingestion completed.")
+    print("Ingestion completed.")

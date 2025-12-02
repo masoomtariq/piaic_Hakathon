@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from app.main import app as fastapi_app  # Assuming app is in chatbot_backend/app/main.py
+from book_project.backend_rag_service.main import app as fastapi_app  # Assuming app is in chatbot_backend/app/main.py
 
 # Adjust this if your main app is in a different location
 

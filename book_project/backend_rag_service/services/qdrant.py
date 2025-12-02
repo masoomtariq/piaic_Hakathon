@@ -39,7 +39,6 @@ def generate_gemini_embedding(text: str):
             model="text-embedding-004",
             contents=text
         )
-        # FIX: Extract the values from the first embedding object
         if result.embeddings:
             return result.embeddings[0].values
         return []
@@ -50,8 +49,6 @@ def generate_gemini_embedding(text: str):
 def retrieve_context_from_qdrant(query_embedding, limit: int = 3, selected_text: str = None):
     """
     Retrieves context. 
-    NOTE: I changed 'selected_text' to 'source_file' because filtering by 
-    exact text body usually breaks RAG. Filtering by metadata (filename) is useful.
     """
     if not qdrant_client:
         return []
@@ -60,7 +57,6 @@ def retrieve_context_from_qdrant(query_embedding, limit: int = 3, selected_text:
 
     query_filter = None
     
-    # FIX: Filter by metadata (source), NOT by the text body content
     if selected_text:
         query_filter = Filter(must=[
             FieldCondition(

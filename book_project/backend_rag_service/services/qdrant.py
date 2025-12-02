@@ -6,58 +6,87 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# --- GEMINI SETUP ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
 else:
-    print("GEMINI_API_KEY not found in environment variables.")
+    print("GEMINI_API_KEY not found.")
+    client = None # Handle missing client safely
 
-
+# --- QDRANT SETUP ---
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 QDRANT_HOST = os.getenv("QDRANT_HOST")
 COLLECTION_NAME = os.getenv("COLLECTION_NAME")
+
 if COLLECTION_NAME and QDRANT_HOST and QDRANT_API_KEY:
     qdrant_client = QdrantClient(
         url=QDRANT_HOST,
         api_key=QDRANT_API_KEY,
     )
 else:
-    print("QDRANT_API_KEY, QDRANT_HOST and COLLECTION_NAME not found in environment variables.")
+    print("QDRANT keys missing.")
+    qdrant_client = None
 
 def generate_gemini_embedding(text: str):
+    """
+    Generates an embedding vector for the given text.
+    """
+    if not client:
+        return []
     try:
         result = client.models.embed_content(
-        model="text-embedding-004",
-        contents=text)
-        return result.embeddings
+            model="text-embedding-004",
+            contents=text
+        )
+        # FIX: Extract the values from the first embedding object
+        if result.embeddings:
+            return result.embeddings[0].values
+        return []
     except Exception as e:
         print(f"Error generating Gemini embedding: {e}")
         return []
 
-def retrieve_context_from_qdrant(query_embedding, limit: int = 3, selected_text: str = None):
+def retrieve_context_from_qdrant(query_embedding, limit: int = 3, source_file: str = None):
+    """
+    Retrieves context. 
+    NOTE: I changed 'selected_text' to 'source_file' because filtering by 
+    exact text body usually breaks RAG. Filtering by metadata (filename) is useful.
+    """
+    if not qdrant_client:
+        return []
+
     search_params = {"hnsw_ef": 128, "exact": False}
 
     query_filter = None
-    if selected_text:
-        # If specific text is selected, try to prioritize documents containing that text
-        # This is a simplified approach, a more advanced solution might involve re-ranking or keyword extraction
+    
+    # FIX: Filter by metadata (source), NOT by the text body content
+    if source_file:
         query_filter = Filter(must=[
             FieldCondition(
-                key="text",
-                match=MatchValue(value=selected_text)
+                key="source", 
+                match=MatchValue(value=source_file)
             )
         ])
 
-    search_result = qdrant_client.search(
-        collection_name=COLLECTION_NAME,
-        query_vector=query_embedding,
-        query_filter=query_filter,
-        limit=limit,
-        with_payload=True,
-        search_params=search_params,
-    )
+    try:
+        search_result = qdrant_client.search(
+            collection_name=COLLECTION_NAME,
+            query_vector=query_embedding,
+            query_filter=query_filter,
+            limit=limit,
+            with_payload=True,
+            search_params=search_params,
+        )
 
-    context = []
-    for hit in search_result:
-        context.append({"text": hit.payload.get("text"), "source": hit.payload.get("source")})
-    return context
+        context = []
+        for hit in search_result:
+            context.append({
+                "text": hit.payload.get("text"), 
+                "source": hit.payload.get("source"),
+                "score": hit.score # Good to see match score
+            })
+        return context
+    except Exception as e:
+        print(f"Error searching Qdrant: {e}")
+        return []

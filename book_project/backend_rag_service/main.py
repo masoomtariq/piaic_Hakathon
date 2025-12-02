@@ -13,7 +13,7 @@ load_dotenv()
 # Configure Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
-    client = genai.Client(api_key="AIzaSyDZJ0q60okwA5VUhIERIdIwWCzF-u2zULU")
+    client = genai.Client(GEMINI_API_KEY)
 else:
     print("GEMINI_API_KEY not found in environment variables. Please set it.")
 
@@ -39,14 +39,13 @@ async def root():
 @app.post("/rag/chat", tags=["rag"])
 async def chat_endpoint(
     user_query: Annotated[str, Body(..., description="The user's query")],
-    collection_name: Annotated[str, Body(..., description="The Qdrant collection to query")],
     selected_text: Annotated[str | None, Body(description="Optional selected text from the document for context")] = None
 ):
     """
     Handles RAG chat queries.
     """
     try:
-        response = await generate_rag_response(user_query, collection_name, selected_text)
+        response = await generate_rag_response(user_query, selected_text)
         return {"response": response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

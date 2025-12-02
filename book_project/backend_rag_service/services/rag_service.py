@@ -9,7 +9,7 @@ if GEMINI_API_KEY:
 else:
     print("GEMINI_API_KEY not found in environment variables.")
 
-async def generate_rag_response(user_query: str, selected_text: str = None) -> str:
+def generate_rag_response(user_query: str, selected_text: str = None) -> str:
 
     # 1. Generate embedding for the user query
     query_embedding = generate_gemini_embedding(user_query)
@@ -17,7 +17,7 @@ async def generate_rag_response(user_query: str, selected_text: str = None) -> s
         return "Error: Could not generate embedding for the query."
 
     # 2. Retrieve relevant context from Qdrant
-    context = await retrieve_context_from_qdrant(query_embedding, selected_text=selected_text)
+    context = retrieve_context_from_qdrant(query_embedding, selected_text=selected_text)
 
     if not context:
         return "I couldn't find any relevant information in the textbook to answer your question."

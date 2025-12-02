@@ -8,17 +8,18 @@ from pathlib import Path
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from services.qdrant import generate_gemini_embedding
-# Add the project root (one level above chatbot_backend) to sys.path
-sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
-
 from qdrant_client.models import VectorParams, Distance, PointStruct
 
 # Load environment variables
 # load_dotenv(dotenv_path=Path(__file__).parent / ".env")
+load_dotenv()
+# Add the project root (one level above chatbot_backend) to sys.path
+sys.path.append(str(Path(__file__).resolve()))
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     client = genai.Client(api_key=GEMINI_API_KEY)
+    print("All set in the gemini")
 else:
     print("GEMINI_API_KEY not found in environment variables.")
 
@@ -30,12 +31,14 @@ if COLLECTION_NAME and QDRANT_HOST and QDRANT_API_KEY:
         url=QDRANT_HOST,
         api_key=QDRANT_API_KEY,
     )
+    print("All set in the qdrant")
 else:
     print("QDRANT_API_KEY, QDRANT_HOST and COLLECTION_NAME not found in environment variables.")
+    raise ValueError("Qdrant keys is not set")
 
 # Create collection if it doesn't exist
-if not client.collection_exists(COLLECTION_NAME):
-    client.recreate_collection(
+if not qdrant_client.collection_exists(COLLECTION_NAME):
+    qdrant_client.create_collection(
         collection_name=COLLECTION_NAME,
         vectors_config=VectorParams(size=768, distance=Distance.COSINE)
     )
@@ -70,7 +73,7 @@ async def ingest_documents():
 
         # Upsert points to Qdrant
         try:
-            client.upsert(collection_name=COLLECTION_NAME, points=points, wait=True)
+            qdrant_client.upsert(collection_name=COLLECTION_NAME, points=points, wait=True)
         except Exception as e:
             print(f"Failed to upsert points for {doc_file}: {e}")
 

@@ -9,7 +9,7 @@ app = FastAPI()
 
 # Configure CORS
 origins = [
-    os.getenv("FRONTEND_URL", "http://localhost:3000"),  # Frontend URL for Docusaurus development
+    os.getenv("FRONTEND_URL")
 ]
 
 app.add_middleware(

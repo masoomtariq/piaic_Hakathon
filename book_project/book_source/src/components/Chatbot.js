@@ -50,8 +50,7 @@ function Chatbot() {
         },
         body: JSON.stringify({
           user_query: query,
-          collection_name: 'book_content', // This should match your Qdrant collection name
-          selected_text: selectedText, // Send selected text for context
+          selected_text: selectedText || null, // Send selected text for context
         }),
       });
 

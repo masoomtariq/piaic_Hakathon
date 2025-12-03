@@ -16,7 +16,7 @@ const config: Config = {
   // 1. UPDATE THIS: URL of your deployed Render backend
   // Do not add a trailing slash (e.g., use "https://my-app.onrender.com")
   customFields: {
-    chatbotBackendUrl: 'https://your-render-service-name.onrender.com', 
+    chatbotBackendUrl: 'https://rag-service-ixm5.onrender.com', 
   },
 
   // Set the production url of your site here

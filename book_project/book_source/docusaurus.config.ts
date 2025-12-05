@@ -20,10 +20,10 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: 'https://masoomtariq.github.io',
+  url: 'https://robotics-liart.vercel.app',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/Hakathon_project/',
+  baseUrl: '/',
 
   trailingSlash: false,
 

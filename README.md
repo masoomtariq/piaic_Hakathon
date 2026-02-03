@@ -1,4 +1,4 @@
-# piaic_Hakathon
+# piaic_hakathon
 
 # Physical AI & Humanoid Robotics: The Interactive Textbook
 
